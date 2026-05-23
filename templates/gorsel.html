@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Görsel Analiz | HantaRisk AI</title>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            color: #38bdf8;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        p.subtitle {
+            color: #94a3b8;
+            margin-bottom: 40px;
+        }
+        /* Yükleme Alanı */
+        .upload-card {
+            background: #1e293b;
+            border: 2px dashed #38bdf8;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-card:hover {
+            background: #334155;
+            border-color: #7dd3fc;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        #fileInput {
+            display: none;
+        }
+        .btn-analiz {
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 12px;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-analiz:hover {
+            background: #7dd3fc;
+        }
+        /* Yükleniyor Efekti */
+        .loader {
+            display: none;
+            margin: 30px auto;
+            border: 4px solid #1e293b;
+            border-top: 4px solid #38bdf8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Sonuç Paneli */
+        .result-panel {
+            display: none;
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 40px;
+            text-align: left;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        .result-header {
+            border-bottom: 1px solid #334155;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .badge {
+            background: #ef4444;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .risk-box {
+            background: #2d1a22;
+            border-left: 4px solid #f43f5e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .disease-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .disease-item {
+            background: #334155;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        ul.recom-list {
+            padding-left: 20px;
+            color: #cbd5e1;
+        }
+        ul.recom-list li {
+            margin-bottom: 8px;
+        }
+        .back-btn {
+            margin-top: 30px;
+            display: inline-block;
+            color: #94a3b8;
+            text-decoration: none;
+        }
+        .back-btn:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🖼️ Çok Yönlü Görsel Analiz</h1>
+        <p class="subtitle">Sisteme herhangi bir canlı, cansız nesne, bitki veya mikroskobik görsel yükleyerek sağlık risklerini taratabilirsiniz.</p>
+
+        <div class="upload-card" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📸</div>
+            <p id="uploadText">Taramak istediğiniz görseli seçmek için tıklayın veya sürükleyin</p>
+            <input type="file" id="fileInput" accept="image/*" onchange="fileSelected(event)">
+            <button class="btn-analiz" id="uploadBtn" style="display:none;" onclick="startAnalysis(event)">Analizi Başlat</button>
+        </div>
+
+        <div class="loader" id="loader"></div>
+
+        <div class="result-panel" id="resultPanel">
+            <div class="result-header">
+                <h2 style="margin:0; display:flex; justify-content:space-between; align-items:center;">
+                    <span id="resObject">Tespit Edilen Nesne</span>
+                    <span class="badge" id="resRiskLevel">Yüksek Risk</span>
+                </h2>
+                <p style="color:#94a3b8; margin: 5px 0 0 0;" id="resCategory">Kategori: Canlı</p>
+            </div>
+
+            <h3>☣️ Hantavirüs Risk Analizi</h3>
+            <div class="risk-box">
+                <p style="margin:0;" id="resHantaDesc">Hantavirüs riski detayları...</p>
+            </div>
+
+            <h3>🩺 Diğer Olası Sağlık Riskleri / Hastalıklar</h3>
+            <div class="disease-list" id="resOtherDiseases">
+                </div>
+
+            <h3>📋 Güvenlik ve Korunma Önerileri</h3>
+            <ul class="recom-list" id="resRecommendations">
+                </ul>
+        </div>
+
+        <a href="/" class="back-btn">← Ana Sayfaya Dön</a>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        function fileSelected(event) {
+            event.stopPropagation();
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('uploadText').innerText = "Seçilen Dosya: " + file.name;
+                document.getElementById('uploadBtn').style.display = 'inline-block';
+            }
+        }
+
+        function startAnalysis(event) {
+            event.stopPropagation(); // Karta tıklama tetiklenmesin
+            if (!selectedFile) return;
+
+            // Görsel arayüz hazırlıkları (loader göster, paneli gizle)
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('resultPanel').style.display = 'none';
+
+            // FormData hazırlığı (Dosyayı paketleme)
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            // app.py içerisindeki API rotamıza asenkron istek atıyoruz
+            fetch('/api/analiz-et', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loader').style.display = 'none';
+                
+                if (data.status === 'success') {
+                    // Gelen jenerik JSON verisini HTML elementlerine dağıtıyoruz
+                    document.getElementById('resObject').innerText = data.meta.detected_object;
+                    document.getElementById('resCategory').innerText = "Kategori: " + data.meta.category;
+                    document.getElementById('resRiskLevel').innerText = data.hantavirus_risk.risk_level;
+                    document.getElementById('resHantaDesc').innerText = data.hantavirus_risk.description;
+
+                    // Dinamik diğer hastalıklar listesi
+                    const diseaseDiv = document.getElementById('resOtherDiseases');
+                    diseaseDiv.innerHTML = '';
+                    data.other_health_risks.forEach(dis => {
+                        diseaseDiv.innerHTML += `
+                            <div class="disease-item">
+                                <strong style="color:#38bdf8;">${dis.disease_name}</strong> 
+                                <span style="font-size:0.8rem; background:#475569; padding:2px 6px; border-radius:4px; margin-left:5px;">${dis.risk_factor}</span>
+                                <p style="margin:5px 0 0 0; font-size:0.9rem; color:#cbd5e1;">${dis.note}</p>
+                            </div>
+                        `;
+                    });
+
+                    // Dinamik öneriler listesi
+                    const recomUl = document.getElementById('resRecommendations');
+                    recomUl.innerHTML = '';
+                    data.recommendations.forEach(rec => {
+                        recomUl.innerHTML += `<li>${rec}</li>`;
+                    });
+
+                    // Sonuç panelini şık bir şekilde göster
+                    document.getElementById('resultPanel').style.display = 'block';
+                } else {
+                    alert("Hata: " + data.message);
+                }
+            })
+            .catch(err => {
+                document.getElementById('loader').style.display = 'none';
+                console.error(err);
+                alert("Analiz sırasında bir iletişim hatası oluştu.");
+            });
+        }
+    </script>
+</body>
+</html>
