@@ -1,0 +1,4 @@
+flask
+folium
+gunicorn
+pandas
