@@ -1,4 +1,5 @@
-flask
+Flask
 folium
 gunicorn
 pandas
+numpy
