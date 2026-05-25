@@ -1,133 +1,106 @@
-<!DOCTYPE html>
-<html lang="tr">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Veri Grafikleri | HantaRisk AI</title>
+{% block content %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <style>
-        body {
-            background: #0f172a;
-            color: white;
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 40px 20px;
-        }
-        .charts-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            max-width: 1200px;
-            margin: 40px auto;
-        }
-        @media (max-width: 768px) {
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        .chart-card {
-            background: #1e293b;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            border: 1px solid #334155;
-        }
-        .chart-card h3 {
-            margin-top: 0;
-            color: #38bdf8;
-            font-size: 1.2rem;
-            border-bottom: 1px solid #334155;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .btn {
-            display: inline-block;
-            text-decoration: none;
-            margin-top: 20px;
-        }
-    </style>
-</head>
+<section class="text-center mb-5">
+    <h1 class="page-title">📈 Küresel Epidemiyolojik Veri Grafikleri</h1>
+    <p class="page-subtitle">
+        Hantavirüs vaka dağılımları, çevresel risk analizleri ve yapay zekâ model verileri.
+    </p>
+</section>
 
-<body>
+<div class="charts-grid">
 
-    <div class="container" style="max-width: 1200px; margin: 0 auto; text-align: center;">
-
-        <h1 style="color: #38bdf8; font-size: 2.5rem;">📈 Küresel Epidemiyolojik Veri Grafikleri</h1>
-        <p style="color: #94a3b8;">Yapay zekâ modelimizin beslendiği hantavirüs vaka dağılımları ve çevresel risk korelasyonları.</p>
-
-        <div class="charts-grid">
-
-            <div class="chart-card">
-                <h3>Vaka Sayılarının Yıllara Göre Değişimi (Küresel)</h3>
-                <canvas id="lineChart"></canvas>
-            </div>
-
-            <div class="chart-card">
-                <h3>Virüsün Tespit Edildiği Canlı Türü Dağılımı</h3>
-                <canvas id="pieChart"></canvas>
-            </div>
-
-            <div class="chart-card">
-                <h3>Bölgelere Göre Risk Yoğunluğu (%)</h3>
-                <canvas id="barChart"></canvas>
-            </div>
-
-            <div class="chart-card">
-                <h3>Çevresel Faktörlerin Vaka Artışına Etkisi</h3>
-                <canvas id="radarChart"></canvas>
-            </div>
-
-        </div>
-
-        <a href="/" class="btn">
-            ⬅️ Ana Sayfaya Dön
-        </a>
-
+    <div class="chart-card">
+        <h3>📊 Yıllara Göre Vaka Sayısı</h3>
+        <canvas id="lineChart"></canvas>
     </div>
 
-    <script>
-        // Ortak Grafik Ayarları (Karanlık tema uyumu için yazıları beyaz yapıyoruz)
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.borderColor = '#334155';
+    <div class="chart-card">
+        <h3>🦠 Kemirgen Türü Dağılımı</h3>
+        <canvas id="pieChart"></canvas>
+    </div>
 
-        // 1. Çizgi Grafik (Line Chart)
-        new Chart(document.getElementById('lineChart'), {
-            type: 'line',
-            data: {
-                labels: ['2021', '2022', '2023', '2024', '2025', '2026'],
-                datasets: [{
-                    label: 'Yıllık Vaka Sayısı',
-                    data: [120, 145, 190, 165, 210, 245],
-                    borderColor: '#38bdf8',
-                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                    tension: 0.3,
-                    fill: true
-                }]
+    <div class="chart-card">
+        <h3>🌍 Bölgesel Risk Yoğunluğu</h3>
+        <canvas id="barChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+        <h3>🌡️ Çevresel Risk Faktörleri</h3>
+        <canvas id="radarChart"></canvas>
+    </div>
+
+</div>
+
+<div class="text-center mt-4">
+    <a href="/" class="btn">⬅️ Ana Sayfaya Dön</a>
+</div>
+
+<script>
+    Chart.defaults.color = "#cbd5e1";
+    Chart.defaults.borderColor = "#334155";
+
+    new Chart(document.getElementById("lineChart"), {
+        type: "line",
+        data: {
+            labels: ["2021", "2022", "2023", "2024", "2025", "2026"],
+            datasets: [{
+                label: "Yıllık Vaka Sayısı",
+                data: [120, 145, 190, 165, 210, 245],
+                borderColor: "#38bdf8",
+                backgroundColor: "rgba(56, 189, 248, 0.2)",
+                tension: 0.3,
+                fill: true
+            }]
+        }
+    });
+
+    new Chart(document.getElementById("pieChart"), {
+        type: "pie",
+        data: {
+            labels: ["Tarla Faresi", "Geyik Faresi", "Pamuk Faresi", "Diğer"],
+            datasets: [{
+                data: [40, 35, 15, 10],
+                backgroundColor: ["#f43f5e", "#38bdf8", "#fbbf24", "#a855f7"]
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    position: "bottom"
+                }
             }
-        });
+        }
+    });
 
-        // 2. Pasta Grafik (Pie Chart)
-        new Chart(document.getElementById('pieChart'), {
-            type: 'pie',
-            data: {
-                labels: ['Tarla Faresi', 'Geyik Faresi', 'Pamuk Faresi', 'Diğer Kemirgenler'],
-                datasets: [{
-                    data: [40, 35, 15, 10],
-                    backgroundColor: ['#f43f5e', '#38bdf8', '#fbbf24', '#a855f7']
-                }]
-            },
-            options: {
-                plugins: { legend: { position: 'bottom' } }
-            }
-        });
+    new Chart(document.getElementById("barChart"), {
+        type: "bar",
+        data: {
+            labels: ["Kuzey Amerika", "Güney Amerika", "Asya", "Avrupa", "Afrika"],
+            datasets: [{
+                label: "Risk Yoğunluğu (%)",
+                data: [85, 70, 60, 35, 20],
+                backgroundColor: ["#ef4444", "#f97316", "#eab308", "#38bdf8", "#22c55e"]
+            }]
+        }
+    });
 
-        // 3. Çubuk Grafik (Bar Chart)
-        new Chart(document.getElementById('barChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Kuzey Amerika', 'Güney Amerika', 'Asya', 'Avrupa', 'Afrika'],
-                datasets:
+    new Chart(document.getElementById("radarChart"), {
+        type: "radar",
+        data: {
+            labels: ["Nem", "Sıcaklık", "Kemirgen Yoğunluğu", "Yağış", "Ormanlık Alan"],
+            datasets: [{
+                label: "Risk Faktörü",
+                data: [90, 70, 95, 80, 85],
+                backgroundColor: "rgba(244, 63, 94, 0.2)",
+                borderColor: "#f43f5e",
+                pointBackgroundColor: "#f43f5e"
+            }]
+        }
+    });
+</script>
+
+{% endblock %}
