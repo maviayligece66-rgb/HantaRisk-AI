@@ -1,60 +1,27 @@
-<!DOCTYPE html>
-<html lang="tr">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dünya Risk Haritası | HantaRisk AI</title>
+{% block content %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    
-    <style>
-        /* Haritanın sayfaya tam oturması ve taşmaması için özel ayarlar */
-        .kart {
-            max-width: 1000px; /* Haritanın daha geniş ve rahat görünmesi için */
-            width: 100%;
-            margin: 20px auto;
-            padding: 10px;
-            background: #1e293b; /* app.py ile uyumlu kart arka planı */
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-            overflow: hidden; /* Harita köşelerinin de oval kalmasını sağlar */
-        }
-        
-        /* Folium haritasının iframe bileşenini kontrol etmek için */
-        .kart iframe {
-            width: 100% !important;
-            height: 500px !important;
-            border: none;
-            border-radius: 12px;
-        }
+<section class="text-center mb-5">
+    <h1 class="page-title">🌍 Dünya Hantavirüs Risk Haritası</h1>
+    <p class="page-subtitle">
+        Ülkelere göre hantavirüs risk seviyelerini harita üzerinde görüntüleyin.
+    </p>
+</section>
 
-        .btn {
-            display: inline-block;
-            margin-top: 15px;
-            text-decoration: none;
-        }
-    </style>
-</head>
-
-<body>
-
-    <div class="container">
-
-        <h1>🌍 Dünya Hantavirüs Risk Haritası</h1>
-
-        <div class="kart">
-            {{ harita|safe }}
-        </div>
-
-        <br>
-
-        <a href="/" class="btn">
-            ⬅️ Ana Sayfa
-        </a>
-
+{% if hata %}
+    <div class="info-section warning-box text-center">
+        <h2>⚠️ Harita Yüklenemedi</h2>
+        <p>{{ hata }}</p>
     </div>
+{% else %}
+    <div class="kart harita-kart">
+        {{ harita|safe }}
+    </div>
+{% endif %}
 
-</body>
+<div class="text-center mt-4">
+    <a href="/" class="btn">⬅️ Ana Sayfaya Dön</a>
+</div>
 
-</html>
+{% endblock %}
