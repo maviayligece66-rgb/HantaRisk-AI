@@ -6,59 +6,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HantaRisk AI</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .main-card {
+            background-color: #1e1e1e;
+            border: 1px solid #2d2d2d;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #ff4757;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .aciklama {
+            color: #a4b0be;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        .btn-custom {
+            background-color: #2f3542;
+            color: #ffffff;
+            border: 1px solid #57606f;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-custom:hover {
+            background-color: #ff4757;
+            color: white;
+            border-color: #ff4757;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+        }
+
+        .info-box {
+            background-color: #151515;
+            border-left: 4px solid #ffca28;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 35px;
+        }
+
+        .info-box h2 {
+            color: #ffca28;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .info-box ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+
+        .info-box li {
+            margin-bottom: 10px;
+            color: #f1f2f6;
+            font-size: 1.05rem;
+        }
+
+        .info-box li::marker {
+            color: #ffca28;
+        }
+        
+        footer {
+            margin-top: 30px;
+            color: #57606f;
+            font-size: 0.85rem;
+        }
+    </style>
 </head>
 
 <body>
 
-    <div class="container">
+    <div class="container d-flex flex-column align-items-center">
 
-        <h1>🦠 HantaRisk AI</h1>
+        <div class="main-card text-center">
 
-        <p class="aciklama">
-            Yapay zekâ destekli hantavirüs analiz sistemi
-        </p>
+            <h1 class="display-4 mb-2">🦠 HantaRisk AI</h1>
+            <p class="aciklama">Yapay zekâ destekli hantavirüs analiz ve erken uyarı sistemi</p>
 
-        <div class="butonlar">
+            <div class="row g-3 justify-content-center">
+                <div class="col-6 col-md-4">
+                    <a href="/analiz" class="btn-custom w-100">
+                        📊 Analiz Başlat
+                    </a>
+                </div>
+                <div class="col-6 col-md-4">
+                    <a href="/bilgi" class="btn-custom w-100">
+                        🦠 Bilgi Paneli
+                    </a>
+                </div>
+                <div class="col-6 col-md-4">
+                    <a href="/grafikler" class="btn-custom w-100">
+                        📈 Veri Grafikleri
+                    </a>
+                </div>
+                <div class="col-6 col-md-6 col-lg-4">
+                    <a href="/gorsel" class="btn-custom w-100">
+                        🖼️ Görsel Analizi
+                    </a>
+                </div>
+                <div class="col-6 col-md-6 col-lg-4">
+                    <a href="/harita" class="btn-custom w-100">
+                        🗺️ Risk Haritası
+                    </a>
+                </div>
+            </div>
 
-            <a href="/analiz" class="btn">
-                📊 Analiz Başlat
-            </a>
+            <div class="info-box text-start">
+                <h2>📊 Sistem Özellikleri</h2>
+                <ul>
+                    <li>Dünya geneli hantavirüs epidemiyolojik veri analizleri</li>
+                    <li>Yapay zekâ ve canlı hava durumu destekli risk tahmini</li>
+                    <li>Coğrafi bilgi sistemleri (GIS) tabanlı risk haritası görselleştirme</li>
+                    <li>İklim değişiklikleri ve çevresel faktörlerin korelasyon analizi</li>
+                    <li>Tesseract OCR tabanlı akıllı görsel bilgi doğrulama sistemi</li>
+                </ul>
+            </div>
 
-            <a href="/bilgi" class="btn">
-                🦠 Bilgi Paneli
-            </a>
-
-            <a href="/grafikler" class="btn">
-                📈 Veri Grafikleri
-            </a>
-
-            <a href="/gorsel" class="btn">
-                🖼️ Görsel Analizi
-            </a>
-
-            <a href="/harita" class="btn">
-                🗺️ Risk Haritası
-            </a>
-
-        </div>
-
-        <div class="kart">
-
-            <h2>📊 Sistem Özellikleri</h2>
-
-            <ul>
-                <li>Dünya geneli hantavirüs analizleri</li>
-                <li>Yapay zekâ risk tahmini</li>
-                <li>Harita destekli veri görselleştirme</li>
-                <li>İklim ve çevresel veri analizi</li>
-                <li>Görsel doğrulama sistemi</li>
-            </ul>
+            <footer>
+                © 2026 HantaRisk AI • Büyük Veri ve Sağlık Teknolojileri Projesi
+            </footer>
 
         </div>
 
     </div>
 
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
+</body>
 </html>
