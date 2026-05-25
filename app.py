@@ -37,7 +37,6 @@ def gorsel():
     return render_template("gorsel.html")
 
 
-# Çok yönlü görsel analiz sistemi için API Rotası
 @app.route("/api/analiz-et", methods=["POST"])
 def analiz_et():
     if "file" not in request.files:
@@ -93,15 +92,15 @@ def risk_rengi(risk):
     risk = str(risk).lower().strip()
 
     if risk == "high":
-        return "#e74c3c"      # kırmızı
+        return "#e74c3c"
     elif risk == "medium":
-        return "#f39c12"      # turuncu
+        return "#f39c12"
     elif risk == "low":
-        return "#2ecc71"      # yeşil
+        return "#2ecc71"
     elif risk == "no_risk":
-        return "#3498db"      # mavi
+        return "#3498db"
     else:
-        return "#95a5a6"      # gri
+        return "#95a5a6"
 
 
 def risk_adi(risk):
@@ -121,17 +120,25 @@ def risk_adi(risk):
 
 @app.route("/harita")
 def harita():
+    if not os.path.exists(geojson_yolu):
+        return render_template(
+            "harita.html",
+            harita=None,
+            hata="world.geojson dosyası bulunamadı. Lütfen datasets klasörüne ekleyin."
+        )
+
+    if not os.path.exists(risk_csv_yolu):
+        return render_template(
+            "harita.html",
+            harita=None,
+            hata="hanta_risk.csv dosyası bulunamadı. Lütfen datasets klasörüne ekleyin."
+        )
+
     dunya_haritasi = folium.Map(
         location=[20, 0],
         zoom_start=2,
         tiles="cartodbpositron"
     )
-
-    if not os.path.exists(geojson_yolu):
-        return "world.geojson dosyası bulunamadı. Lütfen datasets klasörüne ekleyin."
-
-    if not os.path.exists(risk_csv_yolu):
-        return "hanta_risk.csv dosyası bulunamadı. Lütfen datasets klasörüne ekleyin."
 
     with open(geojson_yolu, "r", encoding="utf-8") as f:
         world_data = json.load(f)
@@ -241,7 +248,7 @@ def harita():
 
     harita_html = dunya_haritasi._repr_html_()
 
-    return render_template("harita.html", harita=harita_html)
+    return render_template("harita.html", harita=harita_html, hata=None)
 
 
 if __name__ == "__main__":
