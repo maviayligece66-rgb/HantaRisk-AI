@@ -1,195 +1,91 @@
-<!DOCTYPE html>
-<html lang="tr">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yapay Zekâ Risk Analizi | HantaRisk AI</title>
+{% block content %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body {
-            background: #0f172a;
-            color: white;
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 40px 20px;
-        }
-        .analiz-container {
-            max-width: 700px;
-            margin: 0 auto;
-        }
-        .form-card {
-            background: #1e293b;
-            border-radius: 16px;
-            padding: 35px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            border: 1px solid #334155;
-            text-align: left;
-        }
-        .form-group {
-            margin-bottom: 25px;
-        }
-        .form-group label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #38bdf8;
-        }
-        .checkbox-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-        .checkbox-item {
-            background: #334155;
-            padding: 12px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .checkbox-item:hover {
-            background: #475569;
-        }
-        .checkbox-item input {
-            cursor: pointer;
-            width: 18px;
-            height: 18px;
-        }
-        .select-input {
-            width: 100%;
-            padding: 12px;
-            background: #334155;
-            border: 1px solid #475569;
-            color: white;
-            border-radius: 8px;
-            font-size: 1rem;
-            outline: none;
-        }
-        .btn-submit {
-            background: #38bdf8;
-            color: #0f172a;
-            border: none;
-            padding: 14px 0;
-            width: 100%;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .btn-submit:hover {
-            background: #7dd3fc;
-        }
-        /* Sonuç Alanı */
-        .result-box {
-            display: none;
-            margin-top: 30px;
-            padding: 25px;
-            border-radius: 12px;
-            text-align: center;
-        }
-        .result-low { background: #064e3b; border-left: 5px solid #10b981; }
-        .result-med { background: #78350f; border-left: 5px solid #f59e0b; }
-        .result-high { background: #4c0519; border-left: 5px solid #f43f5e; }
-        
-        .btn-back {
-            display: inline-block;
-            text-decoration: none;
-            margin-top: 25px;
-        }
-    </style>
-</head>
+<section class="text-center mb-5">
+    <h1 class="page-title">📊 Semptom ve Risk Anketi</h1>
+    <p class="page-subtitle">
+        Semptomlar ve çevresel faktörlere göre ön risk değerlendirmesi yapar.
+    </p>
+</section>
 
-<body>
+<div class="form-card">
+    <div class="form-group">
+        <label>1. Yaşadığınız semptomları seçin:</label>
 
-    <div class="analiz-container">
-        <h1 style="color: #38bdf8; font-size: 2.5rem; text-align: center; margin-bottom: 10px;">📊 Semptom ve Risk Anketi</h1>
-        <p style="color: #94a3b8; text-align: center; margin-bottom: 35px;">Mevcut sağlık durumunuzu ve çevresel faktörleri seçerek yapay zekâ tabanlı ön risk skorunuzu hesaplayın.</p>
-
-        <div class="form-card">
-            <div class="form-group">
-                <label>1. Yaşadığınız Semptomları Seçin (Varsa):</label>
-                <div class="checkbox-group">
-                    <label class="checkbox-item"><input type="checkbox" value="ates" class="symptom"> 🤒 Yüksek Ateş</label>
-                    <label class="checkbox-item"><input type="checkbox" value="kas" class="symptom"> 😣 Şiddetli Kas Ağrısı</label>
-                    <label class="checkbox-item"><input type="checkbox" value="nefes" class="symptom"> 🫁 Nefes Darlığı</label>
-                    <label class="checkbox-item"><input type="checkbox" value="bulanti" class="symptom"> 🤢 Bulantı / Kusma</label>
-                    <label class="checkbox-item"><input type="checkbox" value="bas" class="symptom"> 🧠 Şiddetli Baş Ağrısı</label>
-                    <label class="checkbox-item"><input type="checkbox" value="oksuruk" class="symptom"> 😮‍💨 Kuru Öksürük</label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="environment">2. Yakın Zamanda Bulunduğunuz Ortam:</label>
-                <select id="environment" class="select-input">
-                    <option value="normal">Şehir içi / Normal Ev Ortamı</option>
-                    <option value="kirsal">Kırsal Alan / Çiftlik / Ormanlık Arazi</option>
-                    <option value="depo">Eski Depo, Bodrum veya Kulübe Temizliği</option>
-                    <option value="temas">Doğrudan Kemirgen / Fare ile Temas</option>
-                </select>
-            </div>
-
-            <button class="btn-submit" onclick="hesaplaRisk()">Risk Skorunu Hesapla</button>
-
-            <div id="resultLow" class="result-box result-low">
-                <h3 style="margin: 0 0 10px 0;">🟢 Düşük Risk Seviyesi</h3>
-                <p style="margin: 0; font-size: 0.95rem; color: #a7f3d0;">Girdiğiniz bilgilere göre Hantavirüs riskiniz oldukça düşüktür. Semptomlarınız devam ederse mevsimsel hastalıklar için bir hekime danışabilirsiniz.</p>
-            </div>
-
-            <div id="resultMed" class="result-box result-med">
-                <h3 style="margin: 0 0 10px 0;">🟡 Orta Risk Seviyesi</h3>
-                <p style="margin: 0; font-size: 0.95rem; color: #fde68a;">Kırsal alan geçmişi veya belirli semptomlar nedeniyle tedbirli olunmalıdır. Durumunuzu takip edin, semptomlar artarsa sağlık kuruluşuna başvurun.</p>
-            </div>
-
-            <div id="resultHigh" class="result-box result-high">
-                <h3 style="margin: 0 0 10px 0;">🔴 Yüksek Risk Seviyesi</h3>
-                <p style="margin: 0; font-size: 0.95rem; color: #fecdd3;">Seçtiğiniz çevresel faktörler ve hayati semptomlar (özellikle nefes darlığı) yüksek risk işaretidir. Zaman kaybetmeden en yakın sağlık kuruluşuna başvurun ve kemirgen/depo geçmişinizi hekiminize bildirin!</p>
-            </div>
-        </div>
-
-        <div style="text-align: center;">
-            <a href="/" class="btn btn-back">⬅️ Ana Sayfaya Dön</a>
+        <div class="checkbox-grid">
+            <label class="checkbox-item"><input type="checkbox" value="ates" class="symptom"> 🤒 Yüksek ateş</label>
+            <label class="checkbox-item"><input type="checkbox" value="kas" class="symptom"> 😣 Kas ağrısı</label>
+            <label class="checkbox-item"><input type="checkbox" value="nefes" class="symptom"> 🫁 Nefes darlığı</label>
+            <label class="checkbox-item"><input type="checkbox" value="bulanti" class="symptom"> 🤢 Bulantı / kusma</label>
+            <label class="checkbox-item"><input type="checkbox" value="bas" class="symptom"> 🧠 Baş ağrısı</label>
+            <label class="checkbox-item"><input type="checkbox" value="oksuruk" class="symptom"> 😮‍💨 Kuru öksürük</label>
         </div>
     </div>
 
-    <script>
-        function hesaplaRisk() {
-            // Önceki sonuç kutularını gizle
-            document.getElementById('resultLow').style.display = 'none';
-            document.getElementById('resultMed').style.display = 'none';
-            document.getElementById('resultHigh').style.display = 'none';
+    <div class="form-group">
+        <label for="environment">2. Bulunduğunuz ortam:</label>
 
-            // Puanlama değişkenleri
-            let score = 0;
-            const symptoms = document.querySelectorAll('.symptom:checked');
-            const env = document.getElementById('environment').value;
+        <select id="environment" class="select-input">
+            <option value="normal">Şehir içi / normal ev ortamı</option>
+            <option value="kirsal">Kırsal alan / çiftlik / ormanlık arazi</option>
+            <option value="depo">Eski depo, bodrum veya kulübe temizliği</option>
+            <option value="temas">Doğrudan kemirgen / fare ile temas</option>
+        </select>
+    </div>
 
-            // Semptom puanlaması (Nefes darlığı en kritik olanı)
-            symptoms.forEach(s => {
-                if (s.value === 'nefes') score += 4;
-                else score += 1.5;
-            });
+    <button class="btn-submit" onclick="hesaplaRisk()">Risk Skorunu Hesapla</button>
 
-            // Çevresel faktör puanlaması
-            if (env === 'kirsal') score += 2;
-            if (env === 'depo') score += 4;
-            if (env === 'temas') score += 6;
+    <div id="resultLow" class="result-box result-low">
+        <h3>🟢 Düşük Risk</h3>
+        <p>Girdiğiniz bilgilere göre risk seviyesi düşüktür. Semptomlar devam ederse sağlık uzmanına danışmanız önerilir.</p>
+    </div>
 
-            // Sonuçları puana göre ekrana basma
-            if (score <= 3) {
-                document.getElementById('resultLow').style.display = 'block';
-            } else if (score > 3 && score <= 7) {
-                document.getElementById('resultMed').style.display = 'block';
+    <div id="resultMed" class="result-box result-med">
+        <h3>🟡 Orta Risk</h3>
+        <p>Kırsal alan geçmişi veya belirli semptomlar nedeniyle dikkatli olunmalıdır. Semptomlar artarsa sağlık kuruluşuna başvurun.</p>
+    </div>
+
+    <div id="resultHigh" class="result-box result-high">
+        <h3>🔴 Yüksek Risk</h3>
+        <p>Nefes darlığı, kemirgen teması veya riskli ortam geçmişi yüksek risk göstergesi olabilir. En yakın sağlık kuruluşuna başvurun.</p>
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <a href="/" class="btn">⬅️ Ana Sayfaya Dön</a>
+</div>
+
+<script>
+    function hesaplaRisk() {
+        document.getElementById('resultLow').style.display = 'none';
+        document.getElementById('resultMed').style.display = 'none';
+        document.getElementById('resultHigh').style.display = 'none';
+
+        let score = 0;
+        const symptoms = document.querySelectorAll('.symptom:checked');
+        const env = document.getElementById('environment').value;
+
+        symptoms.forEach(s => {
+            if (s.value === 'nefes') {
+                score += 4;
             } else {
-                document.getElementById('resultHigh').style.display = 'block';
+                score += 1.5;
             }
+        });
+
+        if (env === 'kirsal') score += 2;
+        if (env === 'depo') score += 4;
+        if (env === 'temas') score += 6;
+
+        if (score <= 3) {
+            document.getElementById('resultLow').style.display = 'block';
+        } else if (score <= 7) {
+            document.getElementById('resultMed').style.display = 'block';
+        } else {
+            document.getElementById('resultHigh').style.display = 'block';
         }
-    </script>
+    }
+</script>
 
-</body>
-
-</html>
+{% endblock %}
