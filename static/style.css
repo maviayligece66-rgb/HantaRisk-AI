@@ -183,13 +183,41 @@ h1,
 }
 
 .select-input,
-input {
+input[type="text"],
+input[type="number"],
+input[type="file"],
+input[type="email"],
+input[type="password"] {
     width: 100%;
     padding: 14px;
     background: rgba(51, 65, 85, 0.90);
     color: white;
     border: 1px solid var(--kenarlik);
     border-radius: 12px;
+    outline: none;
+}
+
+/* Checkbox düzeltmesi */
+input[type="checkbox"] {
+    width: auto;
+    padding: 0;
+    margin: 0 10px 0 0;
+    transform: scale(1.2);
+    accent-color: var(--ana-renk);
+    cursor: pointer;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.checkbox-item input {
+    flex-shrink: 0;
 }
 
 /* =========================================
