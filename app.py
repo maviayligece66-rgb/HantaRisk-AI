@@ -3,6 +3,11 @@ import folium
 import os
 import json
 import pandas as pd
+import base64
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -10,6 +15,8 @@ base = os.path.dirname(os.path.abspath(__file__))
 
 geojson_yolu = os.path.join(base, "datasets", "world.geojson")
 risk_csv_yolu = os.path.join(base, "datasets", "hanta_risk.csv")
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 @app.route("/")
@@ -37,6 +44,93 @@ def gorsel():
     return render_template("gorsel.html")
 
 
+def ai_gorsel_analiz(file):
+    image_bytes = file.read()
+    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
+    mime_type = file.mimetype or "image/jpeg"
+    image_data_url = f"data:{mime_type};base64,{encoded_image}"
+
+    prompt = """
+Sen HantaRisk AI adlı sağlık ve çevresel risk analiz sistemisin.
+
+Görev:
+Kullanıcının yüklediği görseli analiz et.
+Görseldeki canlıyı, nesneyi veya ortamı tanımla.
+Hantavirüs açısından risk taşıyıp taşımadığını değerlendir.
+
+Kurallar:
+- Hantavirüs doğrudan fotoğraftan tespit edilemez.
+- Bu yüzden risk değerlendirmesi; kemirgen varlığı, depo/bodrum/kırsal ortam, dışkı/idrar izi, hijyen durumu ve temas ihtimaline göre yapılmalıdır.
+- Fare, sıçan, kemirgen, geyik faresi gibi canlılar yüksek risk kabul edilir.
+- Depo, bodrum, ahır, eski kulübe, kirli kapalı alan orta/yüksek risk kabul edilir.
+- İnsan, masa, kitap, evcil hayvan, temiz açık alan gibi görseller düşük risk kabul edilir.
+- Bilinmeyen görsellerde temkinli yorum yap.
+
+Sadece geçerli JSON döndür. Açıklama yazma.
+
+JSON formatı:
+{
+  "status": "success",
+  "meta": {
+    "detected_object": "",
+    "category": "",
+    "confidence_score": 0.0
+  },
+  "hantavirus_risk": {
+    "has_risk": true,
+    "risk_level": "Düşük Risk / Orta Risk / Yüksek Risk",
+    "description": ""
+  },
+  "other_health_risks": [
+    {
+      "disease_name": "",
+      "risk_factor": "",
+      "note": ""
+    }
+  ],
+  "recommendations": []
+}
+"""
+
+    response = client.responses.create(
+        model="gpt-5-mini",
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": prompt},
+                    {"type": "input_image", "image_url": image_data_url}
+                ]
+            }
+        ]
+    )
+
+    text = response.output_text.strip()
+
+    try:
+        return json.loads(text)
+    except Exception:
+        return {
+            "status": "success",
+            "meta": {
+                "detected_object": "Görsel analiz edildi",
+                "category": "AI Görsel Yorumu",
+                "confidence_score": 0.70
+            },
+            "hantavirus_risk": {
+                "has_risk": False,
+                "risk_level": "Düşük Risk",
+                "description": text
+            },
+            "other_health_risks": [],
+            "recommendations": [
+                "Görselde riskli bir canlı veya ortam varsa doğrudan temas etmeyin.",
+                "Kemirgen izi görülen alanlarda maske ve eldiven kullanın.",
+                "Şüpheli temas durumunda sağlık kuruluşuna başvurun."
+            ]
+        }
+
+
 @app.route("/api/analiz-et", methods=["POST"])
 def analiz_et():
     if "file" not in request.files:
@@ -53,39 +147,21 @@ def analiz_et():
             "message": "Geçersiz veya boş dosya ismi."
         }), 400
 
-    mock_response = {
-        "status": "success",
-        "meta": {
-            "detected_object": "Geyik Faresi (Peromyscus maniculatus)",
-            "category": "Canlı / Kemirgen",
-            "confidence_score": 0.94
-        },
-        "hantavirus_risk": {
-            "has_risk": True,
-            "risk_level": "Yüksek Risk",
-            "description": "Analiz edilen görselde hantavirüs taşıma potansiyeli olan kemirgen türü tespit edilmiştir."
-        },
-        "other_health_risks": [
-            {
-                "disease_name": "Lyme Hastalığı",
-                "risk_factor": "Orta Risk",
-                "note": "Bu kemirgen türü, bazı keneler için konak olabilir."
-            },
-            {
-                "disease_name": "Leptospiroz",
-                "risk_factor": "Yüksek Risk",
-                "note": "Kemirgen idrarı ile temas edilen yüzeylerden bulaşma riski bulunabilir."
-            }
-        ],
-        "recommendations": [
-            "Görseldeki canlıyla veya bulunduğu ortamla doğrudan temas kurmayın.",
-            "Şüpheli alanı temizlerken maske ve eldiven kullanın.",
-            "Kuru süpürme yerine ıslak dezenfeksiyon yöntemi tercih edin.",
-            "Olası temas, ısırık veya belirti durumunda sağlık kuruluşuna başvurun."
-        ]
-    }
+    if not os.getenv("OPENAI_API_KEY"):
+        return jsonify({
+            "status": "error",
+            "message": "OPENAI_API_KEY bulunamadı. Lütfen .env dosyasına API anahtarını ekleyin."
+        }), 500
 
-    return jsonify(mock_response)
+    try:
+        sonuc = ai_gorsel_analiz(file)
+        return jsonify(sonuc)
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Görsel analiz sırasında hata oluştu: {str(e)}"
+        }), 500
 
 
 def risk_rengi(risk):
