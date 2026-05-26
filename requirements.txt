@@ -3,3 +3,5 @@ folium
 gunicorn
 pandas
 numpy
+openai
+python-dotenv
