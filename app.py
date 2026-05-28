@@ -1,23 +1,36 @@
-from flask import Flask, render_template, request, jsonify
-import folium
 import os
 import json
-import pandas as pd
 import base64
-from openai import OpenAI
+import pandas as pd
+import folium
+from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
+from google import genai
+from PIL import Image
+import io
 
+# 1. Çevresel değişkenleri yükle (.env dosyasını okur)
 load_dotenv()
 
 app = Flask(__name__)
 
+# 2. Güvenlik Anahtarı ve Klasör Yapılandırması
+app.secret_key = os.getenv("SECRET_KEY", "hantarisk_ai_ozel_sifresi_123")
 base = os.path.dirname(os.path.abspath(__file__))
 
 geojson_yolu = os.path.join(base, "datasets", "world.geojson")
 risk_csv_yolu = os.path.join(base, "datasets", "hanta_risk.csv")
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# 3. Genel Yapay Zekâ (Google Gemini) Bağlantısı
+# .env dosyanızda GEMINI_API_KEY anahtarı tanımlı olmalıdır.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+client = None
 
+if GEMINI_API_KEY:
+    client = genai.Client(api_key=GEMINI_API_KEY)
+
+
+# ----------------- ROUTE TANIMLAMALARI -----------------
 
 @app.route("/")
 def home():
@@ -44,96 +57,87 @@ def gorsel():
     return render_template("gorsel.html")
 
 
+# ----------------- YAPAY ZEKÂ GÖRSEL ANALİZ MOTORU -----------------
 def ai_gorsel_analiz(file):
+    if not client:
+        raise ValueError("Yayay zekâ istemcisi başlatılamadı. GEMINI_API_KEY eksik.")
+
+    # Dosyayı hafızaya alıp Pillow (Image) nesnesine dönüştürüyoruz
     image_bytes = file.read()
-    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
-    mime_type = file.mimetype or "image/jpeg"
-    image_data_url = f"data:{mime_type};base64,{encoded_image}"
+    img = Image.open(io.BytesIO(image_bytes))
 
     prompt = """
 Sen HantaRisk AI adlı sağlık ve çevresel risk analiz sistemisin.
 
 Görev:
 Kullanıcının yüklediği görseli analiz et.
-Görseldeki canlıyı, nesneyi, yiyeceği veya ortamı tanımla.
+Görseldeki canlıyı, nesneyi veya ortamı tanımla.
 Hantavirüs açısından risk taşıyıp taşımadığını değerlendir.
 
 Kurallar:
 - Hantavirüs doğrudan fotoğraftan tespit edilemez.
-- Risk değerlendirmesi; kemirgen varlığı, depo/bodrum/kırsal ortam, dışkı/idrar izi, hijyen durumu ve temas ihtimaline göre yapılmalıdır.
+- Bu yüzden risk değerlendirmesi; kemirgen varlığı, depo/bodrum/kırsal ortam, dışkı/idrar izi, hijyen durumu ve temas ihtimaline göre yapılmalıdır.
 - Fare, sıçan, kemirgen, geyik faresi gibi canlılar yüksek risk kabul edilir.
 - Depo, bodrum, ahır, eski kulübe, kirli kapalı alan orta/yüksek risk kabul edilir.
 - İnsan, masa, kitap, evcil hayvan, temiz açık alan gibi görseller düşük risk kabul edilir.
-- Yemek, börek, ekmek, tabak, mutfak ürünü, telefon, bilgisayar gibi nesneler hantavirüs açısından düşük risk kabul edilir.
-- Eğer görsel hantavirüsle ilgisiz bir nesne içeriyorsa yine de nesneyi tanımla ve düşük risk sonucu üret.
 - Bilinmeyen görsellerde temkinli yorum yap.
 
-Eğer görselde hantavirüsle ilişkili bir canlı veya ortam yoksa:
-- category alanına "Gıda / Nesne" veya uygun kategori yaz.
-- risk_level alanına "Düşük Risk" yaz.
-- description alanına "Görselde hantavirüs açısından doğrudan risk taşıyan canlı veya ortam tespit edilmedi." yaz.
+Sadece geçerli bir JSON objesi döndür. Markdown etiketleri (```json ... ``` gibi) KULLANMA, kod blokları ekleme.
 
-Sadece geçerli JSON döndür. Açıklama yazma.
-
-JSON formatı:
+JSON formatı birebir şu şekilde olmalıdır:
 {
   "status": "success",
   "meta": {
-    "detected_object": "",
-    "category": "",
-    "confidence_score": 0.0
+    "detected_object": "Tespit edilen nesne/canlı",
+    "category": "Kategori",
+    "confidence_score": 0.95
   },
   "hantavirus_risk": {
-    "has_risk": false,
-    "risk_level": "Düşük Risk",
-    "description": ""
+    "has_risk": true,
+    "risk_level": "Yüksek Risk / Orta Risk / Düşük Risk",
+    "description": "Risk durumu açıklaması"
   },
   "other_health_risks": [
     {
-      "disease_name": "",
-      "risk_factor": "",
-      "note": ""
+      "disease_name": "Hastalık adı",
+      "risk_factor": "Risk faktörü",
+      "note": "Not"
     }
   ],
-  "recommendations": []
+  "recommendations": ["Tavsiye 1", "Tavsiye 2"]
 }
 """
 
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "input_text", "text": prompt},
-                    {"type": "input_image", "image_url": image_data_url}
-                ]
-            }
-        ]
+    # Gemini Çoklu Ortam (Multimodal) API çağrısı
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=[img, prompt]
     )
 
-    text = response.output_text.strip()
+    text = response.text.strip()
 
     try:
+        # JSON yapısını doğrula ve Python sözlüğüne çevir
         return json.loads(text)
     except Exception:
+        # Fallback yapısı: Eğer model JSON dışında bir metin üretirse hata vermemesi için koruma
         return {
             "status": "success",
             "meta": {
-                "detected_object": "Görsel analiz edildi",
-                "category": "AI Görsel Yorumu",
-                "confidence_score": 0.70
+                "detected_object": "Görsel yapay zekâ tarafından incelendi",
+                "category": "Genel Multimodal Analiz",
+                "confidence_score": 0.85
             },
             "hantavirus_risk": {
-                "has_risk": False,
-                "risk_level": "Düşük Risk",
+                "has_risk": True,
+                "risk_level": "Orta Risk",
                 "description": text
             },
             "other_health_risks": [],
             "recommendations": [
                 "Görselde riskli bir canlı veya ortam varsa doğrudan temas etmeyin.",
-                "Kemirgen izi görülen alanlarda maske ve eldiven kullanın.",
-                "Şüpheli temas durumunda sağlık kuruluşuna başvurun."
+                "Kemirgen izi görülen alanlarda temizlik yaparken maske ve eldiven kullanın.",
+                "Şüpheli bir kemirgen teması durumunda en yakın sağlık kuruluşuna başvurun."
             ]
         }
 
@@ -154,10 +158,10 @@ def analiz_et():
             "message": "Geçersiz veya boş dosya ismi."
         }), 400
 
-    if not os.getenv("OPENAI_API_KEY"):
+    if not os.getenv("GEMINI_API_KEY"):
         return jsonify({
             "status": "error",
-            "message": "OPENAI_API_KEY bulunamadı. Lütfen .env dosyasına API anahtarını ekleyin."
+            "message": "GEMINI_API_KEY bulunamadı. Lütfen Render panelinden veya .env dosyasından API anahtarını tanımlayın."
         }), 500
 
     try:
@@ -167,13 +171,14 @@ def analiz_et():
     except Exception as e:
         return jsonify({
             "status": "error",
-            "message": f"Görsel analiz sırasında hata oluştu: {str(e)}"
+            "message": f"Görsel analiz sırasında sistem hatası oluştu: {str(e)}"
         }), 500
 
 
+# ----------------- HARİTA YARDIMCI FONKSİYONLARI -----------------
+
 def risk_rengi(risk):
     risk = str(risk).lower().strip()
-
     if risk == "high":
         return "#e74c3c"
     elif risk == "medium":
@@ -188,7 +193,6 @@ def risk_rengi(risk):
 
 def risk_adi(risk):
     risk = str(risk).lower().strip()
-
     if risk == "high":
         return "Yüksek Risk"
     elif risk == "medium":
@@ -227,12 +231,10 @@ def harita():
         world_data = json.load(f)
 
     df = pd.read_csv(risk_csv_yolu)
-
     risk_dict = {}
 
     for _, row in df.iterrows():
         country = str(row["country"]).strip()
-
         risk_dict[country] = {
             "risk_level": row.get("risk_level", "unknown"),
             "cases": row.get("cases", 0),
@@ -242,13 +244,9 @@ def harita():
 
     for feature in world_data["features"]:
         props = feature["properties"]
-
         country_name = (
-            props.get("ADMIN")
-            or props.get("NAME")
-            or props.get("name")
-            or props.get("Country")
-            or props.get("country")
+            props.get("ADMIN") or props.get("NAME") or props.get("name") or 
+            props.get("Country") or props.get("country")
         )
 
         if country_name is None:
@@ -265,7 +263,7 @@ def harita():
         renk = risk_rengi(risk)
 
         popup_html = f"""
-        <div style="font-family: Arial; width: 250px;">
+        <div style="font-family: Arial; width: 250px; color: black;">
             <h4>{country_name}</h4>
             <b>Risk Durumu:</b> {risk_adi(risk)}<br>
             <b>Vaka Sayısı:</b> {bilgi["cases"]}<br>
@@ -288,9 +286,7 @@ def harita():
                 "weight": 2,
                 "color": "black"
             },
-            tooltip=folium.Tooltip(
-                f"{country_name} - {risk_adi(risk)}"
-            ),
+            tooltip=folium.Tooltip(f"{country_name} - {risk_adi(risk)}"),
             popup=folium.Popup(popup_html, max_width=300)
         ).add_to(dunya_haritasi)
 
@@ -309,26 +305,15 @@ def harita():
         color: black;
     ">
         <b>Hantavirüs Risk Haritası</b><br><br>
-
-        <span style="background:#e74c3c;width:15px;height:15px;display:inline-block;"></span>
-        Yüksek Risk<br>
-
-        <span style="background:#f39c12;width:15px;height:15px;display:inline-block;"></span>
-        Orta Risk<br>
-
-        <span style="background:#2ecc71;width:15px;height:15px;display:inline-block;"></span>
-        Düşük Risk<br>
-
-        <span style="background:#3498db;width:15px;height:15px;display:inline-block;"></span>
-        Risk Taşımıyor<br>
-
-        <span style="background:#95a5a6;width:15px;height:15px;display:inline-block;"></span>
-        Veri Yok
+        <span style="background:#e74c3c;width:15px;height:15px;display:inline-block;"></span> Yüksek Risk<br>
+        <span style="background:#f39c12;width:15px;height:15px;display:inline-block;"></span> Orta Risk<br>
+        <span style="background:#2ecc71;width:15px;height:15px;display:inline-block;"></span> Düşük Risk<br>
+        <span style="background:#3498db;width:15px;height:15px;display:inline-block;"></span> Risk Taşımıyor<br>
+        <span style="background:#95a5a6;width:15px;height:15px;display:inline-block;"></span> Veri Yok
     </div>
     """
 
     dunya_haritasi.get_root().html.add_child(folium.Element(legend_html))
-
     harita_html = dunya_haritasi._repr_html_()
 
     return render_template("harita.html", harita=harita_html, hata=None)
