@@ -1,7 +1,7 @@
 Flask
-folium
-gunicorn
 pandas
-numpy
-openai
+folium
+google-genai
+Pillow
 python-dotenv
+gunicorn
