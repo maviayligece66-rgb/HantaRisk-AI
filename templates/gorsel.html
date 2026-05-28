@@ -3,22 +3,27 @@
 {% block content %}
 
 <section class="text-center mb-5">
-    <h1 class="page-title">🖼️ Çok Yönlü Görsel Analiz</h1>
-
+    <h1 class="page-title">🖼️ AI Destekli Görsel Analiz</h1>
     <p class="page-subtitle">
-        Görsel yükleyerek olası sağlık riskleri ve çevresel tehlikeler hakkında AI destekli analiz alın.
+        Yüklediğiniz görsel yapay zekâ ile analiz edilir; canlı, nesne veya ortam hantavirüs riski açısından değerlendirilir.
     </p>
 </section>
 
-<div class="upload-card" onclick="document.getElementById('fileInput').click()">
+<div class="upload-card" id="uploadCard" onclick="document.getElementById('fileInput').click()">
 
-    <div class="upload-icon">
-        📸
-    </div>
+    <div class="upload-icon">📸</div>
+
+    <h3>Görsel Yükle</h3>
 
     <p id="uploadText">
-        Taramak istediğiniz görseli seçmek için tıklayın
+        Analiz etmek istediğiniz fotoğrafı seçmek için bu alana tıklayın.
     </p>
+
+    <p class="page-subtitle" style="font-size: 15px; margin-bottom: 10px;">
+        Desteklenen dosyalar: JPG, PNG, JPEG
+    </p>
+
+    <img id="previewImage" style="display:none; max-width: 100%; max-height: 280px; border-radius: 18px; margin-top: 15px;">
 
     <input
         type="file"
@@ -34,53 +39,38 @@
         style="display:none;"
         onclick="startAnalysis(event)"
     >
-        Analizi Başlat
+        🔍 Görseli Analiz Et
     </button>
 
 </div>
 
-<div class="loader" id="loader"></div>
+<div class="analysis-status" id="analysisStatus" style="display:none;">
+    <div class="loader" id="loader"></div>
+    <h3>Yapay zekâ görseli analiz ediyor...</h3>
+    <p>Canlı, nesne, ortam ve olası sağlık riskleri değerlendiriliyor.</p>
+</div>
 
 <div class="result-panel" id="resultPanel">
 
     <div class="result-header">
-
-        <h2 id="resObject">
-            Tespit Edilen Nesne
-        </h2>
-
-        <span class="risk-badge" id="resRiskLevel">
-            Yüksek Risk
-        </span>
-
-        <p id="resCategory">
-            Kategori: Canlı
-        </p>
-
+        <h2 id="resObject">Tespit Edilen İçerik</h2>
+        <span class="risk-badge" id="resRiskLevel">Risk Seviyesi</span>
+        <p id="resCategory">Kategori: -</p>
     </div>
 
     <div class="risk-box">
-        <h3>☣️ Hantavirüs Risk Analizi</h3>
-
-        <p id="resHantaDesc">
-            Risk açıklaması burada görünecek.
-        </p>
+        <h3>☣️ Hantavirüs Risk Yorumu</h3>
+        <p id="resHantaDesc">AI analizi sonrası risk açıklaması burada görünecek.</p>
     </div>
 
     <div class="other-diseases">
-
-        <h3>🩺 Olası Diğer Riskler</h3>
-
+        <h3>🩺 Olası Diğer Sağlık Riskleri</h3>
         <div class="disease-list" id="resOtherDiseases"></div>
-
     </div>
 
     <div class="recommendations-box">
-
         <h3>📋 Güvenlik Önerileri</h3>
-
         <ul id="resRecommendations" class="custom-list"></ul>
-
     </div>
 
 </div>
@@ -90,111 +80,111 @@
 </div>
 
 <script>
-
 let selectedFile = null;
 
 function fileSelected(event) {
-
     event.stopPropagation();
 
     const file = event.target.files[0];
 
-    if (file) {
+    if (!file) return;
 
-        selectedFile = file;
+    selectedFile = file;
 
-        document.getElementById("uploadText").innerText =
-            "Seçilen Dosya: " + file.name;
+    document.getElementById("uploadText").innerText =
+        "Seçilen görsel: " + file.name;
 
-        document.getElementById("uploadBtn").style.display = "inline-block";
-    }
+    document.getElementById("uploadBtn").style.display = "inline-block";
+    document.getElementById("resultPanel").style.display = "none";
+
+    const preview = document.getElementById("previewImage");
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
 }
 
 function startAnalysis(event) {
-
     event.stopPropagation();
 
-    if (!selectedFile) return;
+    if (!selectedFile) {
+        alert("Lütfen önce bir görsel seçin.");
+        return;
+    }
 
+    document.getElementById("analysisStatus").style.display = "block";
     document.getElementById("loader").style.display = "block";
-
     document.getElementById("resultPanel").style.display = "none";
 
     const formData = new FormData();
-
     formData.append("file", selectedFile);
 
     fetch("/api/analiz-et", {
         method: "POST",
         body: formData
     })
-
     .then(response => response.json())
-
     .then(data => {
-
+        document.getElementById("analysisStatus").style.display = "none";
         document.getElementById("loader").style.display = "none";
 
         if (data.status === "success") {
-
             document.getElementById("resObject").innerText =
-                data.meta.detected_object;
+                data.meta.detected_object || "Görsel içeriği analiz edildi";
 
             document.getElementById("resCategory").innerText =
-                "Kategori: " + data.meta.category;
+                "Kategori: " + (data.meta.category || "Belirlenemedi");
 
             document.getElementById("resRiskLevel").innerText =
-                data.hantavirus_risk.risk_level;
+                data.hantavirus_risk.risk_level || "Risk Bilinmiyor";
 
             document.getElementById("resHantaDesc").innerText =
-                data.hantavirus_risk.description;
+                data.hantavirus_risk.description || "Risk açıklaması üretilemedi.";
 
-            const diseaseDiv =
-                document.getElementById("resOtherDiseases");
-
+            const diseaseDiv = document.getElementById("resOtherDiseases");
             diseaseDiv.innerHTML = "";
 
-            data.other_health_risks.forEach(dis => {
-
-                diseaseDiv.innerHTML += `
+            if (data.other_health_risks && data.other_health_risks.length > 0) {
+                data.other_health_risks.forEach(dis => {
+                    diseaseDiv.innerHTML += `
+                        <div class="mini-card">
+                            <h4>${dis.disease_name || "Olası Risk"}</h4>
+                            <p><strong>${dis.risk_factor || "Belirsiz"}</strong></p>
+                            <p>${dis.note || ""}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                diseaseDiv.innerHTML = `
                     <div class="mini-card">
-                        <h4>${dis.disease_name}</h4>
-                        <p><strong>${dis.risk_factor}</strong></p>
-                        <p>${dis.note}</p>
+                        <h4>Ek risk tespit edilmedi</h4>
+                        <p>Görselde belirgin ek sağlık riski bulunamadı.</p>
                     </div>
                 `;
-            });
+            }
 
-            const recomUl =
-                document.getElementById("resRecommendations");
-
+            const recomUl = document.getElementById("resRecommendations");
             recomUl.innerHTML = "";
 
-            data.recommendations.forEach(rec => {
+            if (data.recommendations && data.recommendations.length > 0) {
+                data.recommendations.forEach(rec => {
+                    recomUl.innerHTML += `<li>${rec}</li>`;
+                });
+            } else {
+                recomUl.innerHTML = "<li>Şüpheli durumlarda sağlık kuruluşuna başvurun.</li>";
+            }
 
-                recomUl.innerHTML += `<li>${rec}</li>`;
-            });
-
-            document.getElementById("resultPanel").style.display =
-                "block";
-        }
-
-        else {
-
+            document.getElementById("resultPanel").style.display = "block";
+        } else {
             alert("Hata: " + data.message);
         }
     })
-
     .catch(err => {
-
+        document.getElementById("analysisStatus").style.display = "none";
         document.getElementById("loader").style.display = "none";
 
         console.error(err);
-
         alert("Analiz sırasında hata oluştu.");
     });
 }
-
 </script>
 
 {% endblock %}
