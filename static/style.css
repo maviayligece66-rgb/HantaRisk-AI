@@ -183,41 +183,13 @@ h1,
 }
 
 .select-input,
-input[type="text"],
-input[type="number"],
-input[type="file"],
-input[type="email"],
-input[type="password"] {
+input {
     width: 100%;
     padding: 14px;
     background: rgba(51, 65, 85, 0.90);
     color: white;
     border: 1px solid var(--kenarlik);
     border-radius: 12px;
-    outline: none;
-}
-
-/* Checkbox düzeltmesi */
-input[type="checkbox"] {
-    width: auto;
-    padding: 0;
-    margin: 0 10px 0 0;
-    transform: scale(1.2);
-    accent-color: var(--ana-renk);
-    cursor: pointer;
-}
-
-.checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 18px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.checkbox-item input {
-    flex-shrink: 0;
 }
 
 /* =========================================
@@ -295,53 +267,30 @@ input[type="checkbox"] {
     }
 }
 
-/* =========================================
-   GÖRSEL ANALİZ ALANI DÜZENLEME
-   ========================================= */
-
-.upload-card {
-    max-width: 850px;
-    min-height: 220px;
+.analysis-status {
+    max-width: 780px;
+    margin: 25px auto;
     text-align: center;
-    border: 2px dashed var(--ana-renk);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-    transition: 0.3s;
+    background: rgba(30, 41, 59, 0.78);
+    border: 1px solid var(--kenarlik);
+    border-radius: 20px;
+    padding: 30px;
 }
 
-.upload-card:hover {
-    background: rgba(56, 189, 248, 0.10);
-    transform: translateY(-3px);
+.analysis-status h3 {
+    color: var(--ana-renk);
+    margin-top: 15px;
 }
 
-.upload-icon {
-    font-size: 64px;
+.analysis-status p {
+    color: var(--soluk-metin);
 }
 
-#uploadText {
-    font-size: 20px;
-    color: #e2e8f0;
-    font-weight: 600;
+.upload-card h3 {
+    color: var(--ana-renk);
+    font-weight: 700;
 }
 
 .result-panel {
     display: none;
-}
-
-.result-panel.active {
-    display: block;
-}
-
-.risk-badge {
-    display: inline-block;
-    background: var(--tehlike);
-    color: white;
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-weight: bold;
-    margin: 8px 0;
 }
