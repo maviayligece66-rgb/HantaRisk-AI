@@ -1,6 +1,9 @@
+
 import os
 import json
 import base64
+import sqlite3
+from datetime import datetime
 import pandas as pd
 import folium
 from flask import Flask, render_template, request, jsonify
@@ -20,6 +23,7 @@ base = os.path.dirname(os.path.abspath(__file__))
 
 geojson_yolu = os.path.join(base, "datasets", "world.geojson")
 risk_csv_yolu = os.path.join(base, "datasets", "hanta_risk.csv")
+db_yolu = os.path.join(base, "datasets", "hantarisk_analiz.db")
 
 # 3. Genel Yapay Zekâ (Google Gemini) Bağlantısı
 # .env dosyanızda GEMINI_API_KEY anahtarı tanımlı olmalıdır.
@@ -28,6 +32,108 @@ client = None
 
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
+
+
+
+# ----------------- SQLITE VERİTABANI -----------------
+
+def veritabani_olustur():
+    """Görsel analiz kayıtları için SQLite veritabanını ve tabloyu oluşturur."""
+    try:
+        os.makedirs(os.path.join(base, "datasets"), exist_ok=True)
+
+        conn = sqlite3.connect(db_yolu)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gorsel_analiz_kayitlari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dosya_adi TEXT,
+                tespit_edilen TEXT,
+                kategori TEXT,
+                guven_skoru REAL,
+                risk_var_mi TEXT,
+                risk_seviyesi TEXT,
+                risk_aciklamasi TEXT,
+                tarih TEXT
+            )
+        """)
+
+        conn.commit()
+        conn.close()
+
+        print("SQLite veritabanı hazır.")
+
+    except Exception as e:
+        print("Veritabanı oluşturma hatası:", e)
+
+
+def son_gorsel_analiz_kayitlari(limit=8):
+    """Görsel analiz sayfasında gösterilecek son kayıtları getirir."""
+    try:
+        conn = sqlite3.connect(db_yolu)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM gorsel_analiz_kayitlari
+            ORDER BY id DESC
+            LIMIT ?
+        """, (limit,))
+
+        kayitlar = cursor.fetchall()
+        conn.close()
+
+        return kayitlar
+
+    except Exception as e:
+        print("Görsel analiz kayıtları okuma hatası:", e)
+        return []
+
+
+def analiz_kaydini_veritabanina_ekle(dosya_adi, sonuc):
+    """AI görsel analiz sonucunu SQLite veritabanına kaydeder."""
+    try:
+        meta = sonuc.get("meta", {})
+        risk = sonuc.get("hantavirus_risk", {})
+
+        conn = sqlite3.connect(db_yolu)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO gorsel_analiz_kayitlari (
+                dosya_adi,
+                tespit_edilen,
+                kategori,
+                guven_skoru,
+                risk_var_mi,
+                risk_seviyesi,
+                risk_aciklamasi,
+                tarih
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            dosya_adi,
+            meta.get("detected_object", "Belirlenemedi"),
+            meta.get("category", "Belirlenemedi"),
+            meta.get("confidence_score", 0),
+            str(risk.get("has_risk", False)),
+            risk.get("risk_level", "Belirlenemedi"),
+            risk.get("description", ""),
+            datetime.now().strftime("%d.%m.%Y %H:%M")
+        ))
+
+        conn.commit()
+        conn.close()
+
+        print("Görsel analiz sonucu veritabanına kaydedildi.")
+
+    except Exception as e:
+        print("Görsel analiz veritabanı kayıt hatası:", e)
+
+
+veritabani_olustur()
 
 
 # ----------------- ROUTE TANIMLAMALARI -----------------
@@ -54,7 +160,8 @@ def grafikler():
 
 @app.route("/gorsel")
 def gorsel():
-    return render_template("gorsel.html")
+    kayitlar = son_gorsel_analiz_kayitlari(limit=8)
+    return render_template("gorsel.html", kayitlar=kayitlar)
 
 
 # ----------------- YAPAY ZEKÂ GÖRSEL ANALİZ MOTORU -----------------
@@ -166,6 +273,7 @@ def analiz_et():
 
     try:
         sonuc = ai_gorsel_analiz(file)
+        analiz_kaydini_veritabanina_ekle(file.filename, sonuc)
         return jsonify(sonuc)
 
     except Exception as e:
@@ -173,6 +281,14 @@ def analiz_et():
             "status": "error",
             "message": f"Görsel analiz sırasında sistem hatası oluştu: {str(e)}"
         }), 500
+
+
+
+@app.route("/gecmis")
+def gecmis():
+    kayitlar = son_gorsel_analiz_kayitlari(limit=50)
+    return render_template("gecmis.html", kayitlar=kayitlar)
+
 
 
 # ----------------- HARİTA YARDIMCI FONKSİYONLARI -----------------
@@ -321,3 +437,4 @@ def harita():
 
 if __name__ == "__main__":
     app.run(debug=True)
+    
