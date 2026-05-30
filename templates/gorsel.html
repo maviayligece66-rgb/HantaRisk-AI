@@ -50,7 +50,7 @@
     <p>Canlı, nesne, ortam ve olası sağlık riskleri değerlendiriliyor.</p>
 </div>
 
-<div class="result-panel" id="resultPanel">
+<div class="result-panel" id="resultPanel" style="display:none;">
 
     <div class="result-header">
         <h2 id="resObject">Tespit Edilen İçerik</h2>
@@ -75,7 +75,64 @@
 
 </div>
 
+<section class="mt-5">
+
+    <h2 class="page-title text-center">
+        📋 Son Görsel Analiz Geçmişi
+    </h2>
+
+    <div class="kart" style="width:95%; overflow-x:auto; margin:auto;">
+
+        <table class="table table-dark table-bordered table-hover align-middle">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Dosya</th>
+                    <th>Tespit Edilen</th>
+                    <th>Kategori</th>
+                    <th>Güven Skoru</th>
+                    <th>Risk Seviyesi</th>
+                    <th>Açıklama</th>
+                    <th>Tarih</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for kayit in kayitlar %}
+
+                <tr>
+                    <td>{{ kayit["id"] }}</td>
+                    <td>{{ kayit["dosya_adi"] }}</td>
+                    <td>{{ kayit["tespit_edilen"] }}</td>
+                    <td>{{ kayit["kategori"] }}</td>
+                    <td>{{ kayit["guven_skoru"] }}</td>
+                    <td>{{ kayit["risk_seviyesi"] }}</td>
+                    <td>{{ kayit["risk_aciklamasi"] }}</td>
+                    <td>{{ kayit["tarih"] }}</td>
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="8" class="text-center">
+                        Henüz kayıtlı görsel analiz sonucu bulunmuyor.
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</section>
+
 <div class="text-center mt-4">
+    <a href="/gecmis" class="btn">📋 Tüm Geçmişi Gör</a>
     <a href="/" class="btn">⬅️ Ana Sayfaya Dön</a>
 </div>
 
@@ -173,6 +230,11 @@ function startAnalysis(event) {
             }
 
             document.getElementById("resultPanel").style.display = "block";
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
         } else {
             alert("Hata: " + data.message);
         }
