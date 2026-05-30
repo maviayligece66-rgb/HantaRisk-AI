@@ -1,7 +1,5 @@
-
 import os
 import json
-import base64
 import sqlite3
 from datetime import datetime
 import pandas as pd
@@ -12,65 +10,52 @@ from google import genai
 from PIL import Image
 import io
 
-# 1. Çevresel değişkenleri yükle (.env dosyasını okur)
 load_dotenv()
 
 app = Flask(__name__)
-
-# 2. Güvenlik Anahtarı ve Klasör Yapılandırması
 app.secret_key = os.getenv("SECRET_KEY", "hantarisk_ai_ozel_sifresi_123")
+
 base = os.path.dirname(os.path.abspath(__file__))
 
-geojson_yolu = os.path.join(base, "datasets", "world.geojson")
-risk_csv_yolu = os.path.join(base, "datasets", "hanta_risk.csv")
-db_yolu = os.path.join(base, "datasets", "hantarisk_analiz.db")
+datasets_klasoru = os.path.join(base, "datasets")
+os.makedirs(datasets_klasoru, exist_ok=True)
 
-# 3. Genel Yapay Zekâ (Google Gemini) Bağlantısı
-# .env dosyanızda GEMINI_API_KEY anahtarı tanımlı olmalıdır.
+geojson_yolu = os.path.join(datasets_klasoru, "world.geojson")
+risk_csv_yolu = os.path.join(datasets_klasoru, "hanta_risk.csv")
+db_yolu = os.path.join(datasets_klasoru, "hantarisk_analiz.db")
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = None
-
-if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
 # ----------------- SQLITE VERİTABANI -----------------
 
 def veritabani_olustur():
-    """Görsel analiz kayıtları için SQLite veritabanını ve tabloyu oluşturur."""
-    try:
-        os.makedirs(os.path.join(base, "datasets"), exist_ok=True)
+    conn = sqlite3.connect(db_yolu)
+    cursor = conn.cursor()
 
-        conn = sqlite3.connect(db_yolu)
-        cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS gorsel_analiz_kayitlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dosya_adi TEXT,
+            tespit_edilen TEXT,
+            kategori TEXT,
+            guven_skoru REAL,
+            risk_var_mi TEXT,
+            risk_seviyesi TEXT,
+            risk_aciklamasi TEXT,
+            tarih TEXT
+        )
+    """)
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS gorsel_analiz_kayitlari (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                dosya_adi TEXT,
-                tespit_edilen TEXT,
-                kategori TEXT,
-                guven_skoru REAL,
-                risk_var_mi TEXT,
-                risk_seviyesi TEXT,
-                risk_aciklamasi TEXT,
-                tarih TEXT
-            )
-        """)
-
-        conn.commit()
-        conn.close()
-
-        print("SQLite veritabanı hazır.")
-
-    except Exception as e:
-        print("Veritabanı oluşturma hatası:", e)
+    conn.commit()
+    conn.close()
 
 
 def son_gorsel_analiz_kayitlari(limit=8):
-    """Görsel analiz sayfasında gösterilecek son kayıtları getirir."""
     try:
+        veritabani_olustur()
+
         conn = sqlite3.connect(db_yolu)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -88,55 +73,52 @@ def son_gorsel_analiz_kayitlari(limit=8):
         return kayitlar
 
     except Exception as e:
-        print("Görsel analiz kayıtları okuma hatası:", e)
+        print("Kayıt okuma hatası:", e)
         return []
 
 
 def analiz_kaydini_veritabanina_ekle(dosya_adi, sonuc):
-    """AI görsel analiz sonucunu SQLite veritabanına kaydeder."""
-    try:
-        meta = sonuc.get("meta", {})
-        risk = sonuc.get("hantavirus_risk", {})
+    veritabani_olustur()
 
-        conn = sqlite3.connect(db_yolu)
-        cursor = conn.cursor()
+    meta = sonuc.get("meta", {})
+    risk = sonuc.get("hantavirus_risk", {})
 
-        cursor.execute("""
-            INSERT INTO gorsel_analiz_kayitlari (
-                dosya_adi,
-                tespit_edilen,
-                kategori,
-                guven_skoru,
-                risk_var_mi,
-                risk_seviyesi,
-                risk_aciklamasi,
-                tarih
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+    conn = sqlite3.connect(db_yolu)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO gorsel_analiz_kayitlari (
             dosya_adi,
-            meta.get("detected_object", "Belirlenemedi"),
-            meta.get("category", "Belirlenemedi"),
-            meta.get("confidence_score", 0),
-            str(risk.get("has_risk", False)),
-            risk.get("risk_level", "Belirlenemedi"),
-            risk.get("description", ""),
-            datetime.now().strftime("%d.%m.%Y %H:%M")
-        ))
+            tespit_edilen,
+            kategori,
+            guven_skoru,
+            risk_var_mi,
+            risk_seviyesi,
+            risk_aciklamasi,
+            tarih
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        dosya_adi,
+        meta.get("detected_object", "Belirlenemedi"),
+        meta.get("category", "Belirlenemedi"),
+        meta.get("confidence_score", 0),
+        str(risk.get("has_risk", False)),
+        risk.get("risk_level", "Belirlenemedi"),
+        risk.get("description", ""),
+        datetime.now().strftime("%d.%m.%Y %H:%M")
+    ))
 
-        conn.commit()
-        conn.close()
+    conn.commit()
+    conn.close()
 
-        print("Görsel analiz sonucu veritabanına kaydedildi.")
-
-    except Exception as e:
-        print("Görsel analiz veritabanı kayıt hatası:", e)
+    return True
 
 
 veritabani_olustur()
 
 
-# ----------------- ROUTE TANIMLAMALARI -----------------
+# ----------------- SAYFALAR -----------------
 
 @app.route("/")
 def home():
@@ -164,12 +146,54 @@ def gorsel():
     return render_template("gorsel.html", kayitlar=kayitlar)
 
 
-# ----------------- YAPAY ZEKÂ GÖRSEL ANALİZ MOTORU -----------------
+@app.route("/gecmis")
+def gecmis():
+    kayitlar = son_gorsel_analiz_kayitlari(limit=50)
+    return render_template("gecmis.html", kayitlar=kayitlar)
+
+
+# ----------------- VERİTABANI TEST -----------------
+
+@app.route("/api/veritabani-test")
+def veritabani_test():
+    try:
+        veritabani_olustur()
+
+        test_sonuc = {
+            "meta": {
+                "detected_object": "Test Kaydı",
+                "category": "Veritabanı Testi",
+                "confidence_score": 1.0
+            },
+            "hantavirus_risk": {
+                "has_risk": False,
+                "risk_level": "Test",
+                "description": "Bu kayıt veritabanı bağlantısını test etmek için oluşturuldu."
+            }
+        }
+
+        analiz_kaydini_veritabanina_ekle("test_dosyasi.png", test_sonuc)
+
+        return jsonify({
+            "status": "success",
+            "message": "Veritabanı bağlantısı başarılı. Test kaydı eklendi.",
+            "db_yolu": db_yolu
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "db_yolu": db_yolu
+        }), 500
+
+
+# ----------------- YAPAY ZEKÂ GÖRSEL ANALİZ -----------------
+
 def ai_gorsel_analiz(file):
     if not client:
-        raise ValueError("Yayay zekâ istemcisi başlatılamadı. GEMINI_API_KEY eksik.")
+        raise ValueError("Yapay zekâ istemcisi başlatılamadı. GEMINI_API_KEY eksik.")
 
-    # Dosyayı hafızaya alıp Pillow (Image) nesnesine dönüştürüyoruz
     image_bytes = file.read()
     img = Image.open(io.BytesIO(image_bytes))
 
@@ -189,9 +213,9 @@ Kurallar:
 - İnsan, masa, kitap, evcil hayvan, temiz açık alan gibi görseller düşük risk kabul edilir.
 - Bilinmeyen görsellerde temkinli yorum yap.
 
-Sadece geçerli bir JSON objesi döndür. Markdown etiketleri (```json ... ``` gibi) KULLANMA, kod blokları ekleme.
+Sadece geçerli bir JSON objesi döndür. Markdown etiketi kullanma.
 
-JSON formatı birebir şu şekilde olmalıdır:
+JSON formatı:
 {
   "status": "success",
   "meta": {
@@ -215,19 +239,16 @@ JSON formatı birebir şu şekilde olmalıdır:
 }
 """
 
-    # Gemini Çoklu Ortam (Multimodal) API çağrısı
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model="gemini-2.5-flash",
         contents=[img, prompt]
     )
 
     text = response.text.strip()
 
     try:
-        # JSON yapısını doğrula ve Python sözlüğüne çevir
         return json.loads(text)
     except Exception:
-        # Fallback yapısı: Eğer model JSON dışında bir metin üretirse hata vermemesi için koruma
         return {
             "status": "success",
             "meta": {
@@ -265,15 +286,23 @@ def analiz_et():
             "message": "Geçersiz veya boş dosya ismi."
         }), 400
 
-    if not os.getenv("GEMINI_API_KEY"):
+    if not GEMINI_API_KEY:
         return jsonify({
             "status": "error",
-            "message": "GEMINI_API_KEY bulunamadı. Lütfen Render panelinden veya .env dosyasından API anahtarını tanımlayın."
+            "message": "GEMINI_API_KEY bulunamadı. Render Environment kısmına eklenmeli."
         }), 500
 
     try:
         sonuc = ai_gorsel_analiz(file)
-        analiz_kaydini_veritabanina_ekle(file.filename, sonuc)
+
+        try:
+            analiz_kaydini_veritabanina_ekle(file.filename, sonuc)
+            sonuc["database_status"] = "success"
+            sonuc["database_message"] = "Analiz sonucu veritabanına kaydedildi."
+        except Exception as db_error:
+            sonuc["database_status"] = "error"
+            sonuc["database_message"] = f"Veritabanı kayıt hatası: {str(db_error)}"
+
         return jsonify(sonuc)
 
     except Exception as e:
@@ -283,18 +312,11 @@ def analiz_et():
         }), 500
 
 
-
-@app.route("/gecmis")
-def gecmis():
-    kayitlar = son_gorsel_analiz_kayitlari(limit=50)
-    return render_template("gecmis.html", kayitlar=kayitlar)
-
-
-
-# ----------------- HARİTA YARDIMCI FONKSİYONLARI -----------------
+# ----------------- HARİTA -----------------
 
 def risk_rengi(risk):
     risk = str(risk).lower().strip()
+
     if risk == "high":
         return "#e74c3c"
     elif risk == "medium":
@@ -309,6 +331,7 @@ def risk_rengi(risk):
 
 def risk_adi(risk):
     risk = str(risk).lower().strip()
+
     if risk == "high":
         return "Yüksek Risk"
     elif risk == "medium":
@@ -360,13 +383,15 @@ def harita():
 
     for feature in world_data["features"]:
         props = feature["properties"]
-        country_name = (
-            props.get("ADMIN") or props.get("NAME") or props.get("name") or 
-            props.get("Country") or props.get("country")
-        )
 
-        if country_name is None:
-            country_name = "Bilinmeyen Ülke"
+        country_name = (
+            props.get("ADMIN") or
+            props.get("NAME") or
+            props.get("name") or
+            props.get("Country") or
+            props.get("country") or
+            "Bilinmeyen Ülke"
+        )
 
         bilgi = risk_dict.get(country_name, {
             "risk_level": "unknown",
